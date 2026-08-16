@@ -1,0 +1,877 @@
+.retro-editor {
+  --win-gray: #c0c0c0;
+  --win-light: #ffffff;
+  --win-dark: #808080;
+  --win-darker: #404040;
+  --win-blue: #000080;
+
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+
+  background: var(--win-gray);
+  color: #000;
+
+  font-family:
+    "MS Sans Serif",
+    "Microsoft Sans Serif",
+    Arial,
+    sans-serif;
+
+  font-size: 13px;
+  image-rendering: pixelated;
+}
+
+/* --------------------------------
+   TOP BLUE BAR
+-------------------------------- */
+
+.retro-topbar {
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #000080;
+  color: white;
+
+  padding-left: 24px;
+
+  font-weight: bold;
+}
+
+.top-links {
+  display: flex;
+  gap: 28px;
+}
+
+.top-links span {
+  cursor: pointer;
+}
+
+.window-controls {
+  display: flex;
+  gap: 3px;
+  padding-right: 4px;
+}
+
+.window-controls button {
+  width: 20px;
+  height: 20px;
+
+  padding: 0;
+
+  background: var(--win-gray);
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 14px;
+
+  cursor: pointer;
+}
+
+/* --------------------------------
+   TOP TABS
+-------------------------------- */
+
+.retro-tabs {
+  height: 31px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 13px;
+
+  background: var(--win-gray);
+
+  border-bottom: 2px solid var(--win-darker);
+}
+
+.retro-tab {
+  height: 23px;
+
+  padding: 1px 11px;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+
+  font-family:
+    "MS Sans Serif",
+    Arial,
+    sans-serif;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.retro-tab:active,
+.retro-tab.active {
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+/* --------------------------------
+   MAIN
+-------------------------------- */
+
+.retro-main {
+  display: flex;
+
+  height: calc(100vh - 79px);
+
+  background: var(--win-gray);
+}
+
+/* --------------------------------
+   PANELS
+-------------------------------- */
+
+.retro-panel {
+  background: #c0c0c0;
+
+  border-right: 2px solid #404040;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.left-panel {
+  width: 188px;
+  flex-shrink: 0;
+
+  border-left: 2px solid white;
+}
+
+.right-panel {
+  width: 355px;
+  flex-shrink: 0;
+
+  border-left: 2px solid white;
+  border-right: 0;
+}
+
+.panel-title {
+  height: 29px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-top: 2px solid white;
+  border-bottom: 2px solid #404040;
+
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* --------------------------------
+   LEFT MENU
+-------------------------------- */
+
+.left-actions {
+  padding: 20px 17px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+.retro-button {
+  height: 31px;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+
+  font-family:
+    "MS Sans Serif",
+    Arial,
+    sans-serif;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.retro-button:active {
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+.retro-button.blue {
+  background: #d4e7ee;
+}
+
+.retro-button.yellow {
+  background: #eeeeae;
+}
+
+.retro-button.purple {
+  background: #d8c6ec;
+}
+
+/* --------------------------------
+   LEFT DECORATION
+-------------------------------- */
+
+.left-decoration {
+  margin-top: auto;
+  padding: 12px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.ad-box {
+  padding: 9px;
+
+  background: #fff3c9;
+
+  border: 2px solid #aaa;
+
+  line-height: 18px;
+}
+
+.ad-box strong {
+  display: block;
+}
+
+.ad-box.green {
+  border: 3px solid #78ff00;
+}
+
+.star-text {
+  color: #7b00a8;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+/* --------------------------------
+   WORKSPACE
+-------------------------------- */
+
+.retro-workspace {
+  flex: 1;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      #e5e5e5 0%,
+      #bdbdbd 100%
+    );
+}
+
+.canvas-toolbar {
+  height: 29px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 12px;
+
+  background: #c0c0c0;
+
+  border-bottom: 2px solid #808080;
+
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.canvas-info {
+  display: flex;
+  gap: 15px;
+  font-weight: normal;
+}
+
+.canvas-area {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  background:
+    repeating-conic-gradient(
+      #d0d0d0 0% 25%,
+      #c5c5c5 0% 50%
+    )
+    50% / 16px 16px;
+}
+
+.canvas-placeholder {
+  width: 380px;
+  min-height: 260px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: #c0c0c0;
+
+  border-top: 3px solid white;
+  border-left: 3px solid white;
+  border-right: 3px solid #404040;
+  border-bottom: 3px solid #404040;
+
+  text-align: center;
+}
+
+.placeholder-icon {
+  font-size: 46px;
+  margin-bottom: 12px;
+}
+
+.placeholder-title {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.placeholder-text {
+  margin-top: 8px;
+
+  color: #404040;
+
+  font-size: 12px;
+}
+
+.upload-button {
+  width: 150px;
+  margin-top: 20px;
+}
+
+/* --------------------------------
+   RIGHT SETTINGS
+-------------------------------- */
+
+.settings-placeholder {
+  padding: 16px 18px;
+}
+
+.setting-label {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.fake-slider {
+  position: relative;
+
+  height: 14px;
+
+  margin: 0 10px;
+}
+
+.slider-track {
+  position: absolute;
+
+  top: 6px;
+  left: 0;
+  right: 0;
+
+  height: 3px;
+
+  background: #808080;
+}
+
+.slider-handle {
+  position: absolute;
+
+  right: 0;
+  top: 0;
+
+  width: 11px;
+  height: 18px;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+}
+
+.setting-value {
+  text-align: right;
+
+  font-weight: bold;
+
+  margin-top: -1px;
+}
+
+/* --------------------------------
+   TOOL GRID
+-------------------------------- */
+
+.setting-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 30px 25px;
+
+  margin-top: 58px;
+}
+
+.retro-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 6px;
+}
+
+.retro-tool-label {
+  font-size: 12px;
+}
+
+.tool-icon {
+  width: 82px;
+  height: 82px;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+
+  font-size: 36px;
+
+  cursor: pointer;
+}
+
+.tool-icon.selected {
+  outline: 2px solid #ff00cc;
+  outline-offset: -4px;
+}
+
+.tool-icon:active {
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+/* --------------------------------
+   APPLY BUTTON
+-------------------------------- */
+
+.apply-button {
+  width: 185px;
+  height: 27px;
+
+  display: block;
+
+  margin: 42px auto 0;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+  border-left: 2px solid white;
+  border-right: 2px solid #404040;
+  border-bottom: 2px solid #404040;
+
+  font-family:
+    "MS Sans Serif",
+    Arial,
+    sans-serif;
+
+  cursor: pointer;
+}
+
+/* --------------------------------
+   STATUS BAR
+-------------------------------- */
+
+.retro-status {
+  height: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 8px;
+
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+
+  font-size: 11px;
+}
+
+/* --------------------------------
+   ACTIVE TAB
+-------------------------------- */
+
+.retro-tab.active {
+  position: relative;
+
+  background: #d8d8d8;
+
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+/* --------------------------------
+   PANEL DESCRIPTION
+-------------------------------- */
+
+.panel-description {
+  margin: 3px 5px 18px;
+
+  padding: 8px;
+
+  background: #eeeeee;
+
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+
+  text-align: center;
+
+  font-size: 11px;
+}
+
+/* --------------------------------
+   GENERIC PANEL
+-------------------------------- */
+
+.retro-category {
+  margin-top: 10px;
+  margin-bottom: 18px;
+
+  text-align: center;
+
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.generic-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 24px 20px;
+}
+
+/* --------------------------------
+   INTENSITY
+-------------------------------- */
+
+.intensity-section {
+  margin-top: 35px;
+
+  padding-top: 15px;
+
+  border-top: 1px solid #808080;
+}
+
+/* --------------------------------
+   UPLOADED IMAGE
+-------------------------------- */
+
+.editor-image {
+  display: block;
+
+  max-width: 90%;
+  max-height: 90%;
+
+  width: auto;
+  height: auto;
+
+  object-fit: contain;
+
+  border: 2px solid #000;
+
+  box-shadow:
+    3px 3px 0 #404040,
+    -1px -1px 0 white;
+}
+
+/* --------------------------------
+   HTML5 CANVAS
+-------------------------------- */
+
+.editor-canvas {
+  display: block;
+
+  max-width: 90%;
+  max-height: 90%;
+
+  width: auto;
+  height: auto;
+
+  object-fit: contain;
+
+  background: white;
+
+  border: 2px solid #000;
+
+  box-shadow:
+    3px 3px 0 #404040,
+    -1px -1px 0 white;
+}
+
+/* --------------------------------
+   CANVAS CONTAINER
+-------------------------------- */
+
+.canvas-container {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+}
+
+
+/* --------------------------------
+   ZOOM CONTROLS
+-------------------------------- */
+
+.canvas-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-button,
+.zoom-value {
+  height: 21px;
+
+  min-width: 22px;
+
+  padding: 0 5px;
+
+  background: #c0c0c0;
+
+  border-top: 1px solid white;
+  border-left: 1px solid white;
+  border-right: 1px solid #404040;
+  border-bottom: 1px solid #404040;
+
+  font-family:
+    "MS Sans Serif",
+    Arial,
+    sans-serif;
+
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+.zoom-value {
+  min-width: 48px;
+
+  text-align: center;
+}
+
+.zoom-button:active,
+.zoom-value:active {
+  border-top-color: #404040;
+  border-left-color: #404040;
+  border-right-color: white;
+  border-bottom-color: white;
+}
+
+
+/* --------------------------------
+   CANVAS
+-------------------------------- */
+
+.editor-canvas {
+  display: block;
+
+  flex-shrink: 0;
+
+  background: white;
+
+  border: 2px solid #000;
+
+  image-rendering: auto;
+
+  box-shadow:
+    3px 3px 0 #404040,
+    -1px -1px 0 white;
+}
+
+/* =========================================================
+   PHOTO SETTINGS CONTROLS
+========================================================= */
+
+.photo-control-box {
+  margin-top: 18px;
+
+  padding: 10px;
+
+  background: #d4d4d4;
+
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+}
+
+.control-heading {
+  margin-bottom: 10px;
+
+  text-align: center;
+
+  font-size: 12px;
+  font-weight: bold;
+}
+
+
+/* =========================================================
+   QUALITY
+========================================================= */
+
+.quality-row {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.quality-row input[type="range"] {
+  flex: 1;
+
+  accent-color: #000080;
+}
+
+.quality-row span {
+  width: 30px;
+
+  text-align: right;
+
+  font-weight: bold;
+}
+
+.control-help {
+  margin-top: 8px;
+
+  color: #404040;
+
+  font-size: 10px;
+  line-height: 14px;
+}
+
+
+/* =========================================================
+   DIMENSIONS
+========================================================= */
+
+.dimension-row {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+
+  gap: 7px;
+}
+
+.dimension-row label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  font-size: 10px;
+}
+
+.dimension-row input,
+.crop-grid input {
+  width: 90px;
+  height: 23px;
+
+  padding: 2px 5px;
+
+  background: white;
+
+  border-top: 2px solid #404040;
+  border-left: 2px solid #404040;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+
+  font-family:
+    "MS Sans Serif",
+    Arial,
+    sans-serif;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   CROP
+========================================================= */
+
+.crop-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 8px;
+}
+
+.crop-grid label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   TOOL BUTTON
+========================================================= */
+
+.tool-icon {
+  cursor: pointer;
+}
+
+.tool-icon:hover {
+  background: #d8d8d8;
+}
+
+.tool-icon.selected {
+  outline: 2px solid #ff00cc;
+  outline-offset: -4px;
+}
