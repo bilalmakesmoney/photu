@@ -11,6 +11,12 @@ import EditorCanvas, {
   CropArea,
 } from "./EditorCanvas";
 
+import {
+  applyRetroFilter,
+  getDefaultFilterIntensity,
+  FilterName,
+} from "../filters/FilterEngine";
+
 import "./editor.css";
 
 /* =========================================================
@@ -202,29 +208,74 @@ const panelContent: Record<
 };
 
 /* =========================================================
+   FILTER CONFIG
+========================================================= */
+
+const filterOptions: {
+  name: FilterName;
+  title: string;
+  icon: string;
+}[] = [
+  {
+    name: "vintage",
+    title: "Vintage",
+    icon: "✦",
+  },
+
+  {
+    name: "sepia",
+    title: "Sepia",
+    icon: "◈",
+  },
+
+  {
+    name: "blackWhite",
+    title: "Black & White",
+    icon: "◐",
+  },
+
+  {
+    name: "polaroid",
+    title: "Polaroid",
+    icon: "▣",
+  },
+
+  {
+    name: "faded",
+    title: "Faded",
+    icon: "◇",
+  },
+
+  {
+    name: "cyber",
+    title: "Cyber",
+    icon: "★",
+  },
+];
+
+/* =========================================================
    MAIN
 ========================================================= */
 
 export default function EditorShell() {
   /* =======================================================
      IMAGE STATE
-
-     image = LAST COMMITTED IMAGE
-
-     previewImage = CURRENT PREVIEW
-
-     This lets the user stack:
-       Rotate
-       → Flip
-       → Rotate
-       → Crop
-
-     without previous operations disappearing.
   ======================================================= */
 
+  /*
+   * image = LAST COMMITTED IMAGE
+   *
+   * This should only change when the user clicks
+   * Apply Setting.
+   */
   const [image, setImage] =
     useState<string | null>(null);
 
+  /*
+   * previewImage = CURRENT VISUAL PREVIEW
+   *
+   * This can change freely without committing.
+   */
   const [previewImage, setPreviewImage] =
     useState<string | null>(null);
 
@@ -241,7 +292,7 @@ export default function EditorShell() {
     });
 
   /* =======================================================
-     UI
+     UI STATE
   ======================================================= */
 
   const [activeTab, setActiveTab] =
@@ -279,6 +330,40 @@ export default function EditorShell() {
       width: 0,
       height: 0,
     });
+
+  /* =======================================================
+     FILTER STATE
+  ======================================================= */
+
+  /*
+   * Selected filter is ONLY a selection.
+   */
+  const [selectedFilter, setSelectedFilter] =
+    useState<FilterName | null>(
+      null
+    );
+
+  /*
+   * Filter intensity is ONLY preview state.
+   */
+  const [filterIntensity, setFilterIntensity] =
+    useState(70);
+
+  /*
+   * This stores the currently generated
+   * filtered preview.
+   */
+  const [filterPreview, setFilterPreview] =
+    useState<string | null>(
+      null
+    );
+
+  /*
+   * Prevent multiple filter operations from
+   * racing each other.
+   */
+  const filterRequestId =
+    useRef(0);
 
   const currentPanel =
     panelContent[activeTab];
@@ -325,14 +410,6 @@ export default function EditorShell() {
         new Image();
 
       img.onload = () => {
-        const size = {
-          width:
-            img.naturalWidth,
-
-          height:
-            img.naturalHeight,
-        };
-
         setImage(result);
 
         setPreviewImage(
@@ -346,9 +423,19 @@ export default function EditorShell() {
           result
         );
 
+        const size = {
+          width:
+            img.naturalWidth,
+
+          height:
+            img.naturalHeight,
+        };
+
         setImageSize(size);
 
-        setResolution(size);
+        setResolution(
+          size
+        );
 
         setCrop({
           x: 0,
@@ -364,6 +451,21 @@ export default function EditorShell() {
         setSelectedAction(
           "quality"
         );
+
+        /*
+         * Reset filters on new image.
+         */
+        setSelectedFilter(
+          null
+        );
+
+        setFilterPreview(
+          null
+        );
+
+        setFilterIntensity(
+          70
+        );
       };
 
       img.src = result;
@@ -377,38 +479,25 @@ export default function EditorShell() {
   };
 
   /* =========================================================
-     GET CURRENT PREVIEW
+     GET CURRENT WORKING IMAGE
   ========================================================= */
 
+  /*
+   * IMPORTANT:
+   *
+   * For new operations we use previewImage first.
+   *
+   * This means:
+   *
+   * Rotate → Flip → Filter
+   *
+   * will stack.
+   */
   const getCurrentPreview =
     () =>
       previewImageRef.current ??
+      previewImage ??
       image;
-
-  /* =========================================================
-     LOAD IMAGE
-  ========================================================= */
-
-  const loadImage = (
-    source: string
-  ): Promise<HTMLImageElement> => {
-    return new Promise(
-      (
-        resolve,
-        reject
-      ) => {
-        const img =
-          new Image();
-
-        img.onload = () =>
-          resolve(img);
-
-        img.onerror = reject;
-
-        img.src = source;
-      }
-    );
-  };
 
   /* =========================================================
      UPDATE PREVIEW
@@ -435,6 +524,30 @@ export default function EditorShell() {
       width,
       height,
     });
+
+    setZoom(1);
+  };
+
+  /* =========================================================
+     LOAD IMAGE
+  ========================================================= */
+
+  const loadImage = (
+    source: string
+  ): Promise<HTMLImageElement> => {
+    return new Promise(
+      (resolve, reject) => {
+        const img =
+          new Image();
+
+        img.onload = () =>
+          resolve(img);
+
+        img.onerror = reject;
+
+        img.src = source;
+      }
+    );
   };
 
   /* =========================================================
@@ -686,10 +799,6 @@ export default function EditorShell() {
 
   /* =========================================================
      CROP
-
-     Crop is ONLY finalized when Apply Setting is clicked.
-
-     The crop rectangle itself is just state until then.
   ========================================================= */
 
   const cropImage =
@@ -704,45 +813,50 @@ export default function EditorShell() {
           source
         );
 
-      const imageWidth =
-        img.naturalWidth;
-
-      const imageHeight =
-        img.naturalHeight;
-
       const x = Math.max(
         0,
         Math.min(
-          Math.round(crop.x),
-          imageWidth - 1
+          Math.floor(crop.x),
+          img.naturalWidth - 1
         )
       );
 
       const y = Math.max(
         0,
         Math.min(
-          Math.round(crop.y),
-          imageHeight - 1
+          Math.floor(crop.y),
+          img.naturalHeight - 1
         )
       );
 
       const width =
-        Math.max(
-          1,
-          Math.min(
-            Math.round(crop.width),
-            imageWidth - x
-          )
+        Math.min(
+          Math.max(
+            1,
+            Math.floor(
+              crop.width
+            )
+          ),
+          img.naturalWidth - x
         );
 
       const height =
-        Math.max(
-          1,
-          Math.min(
-            Math.round(crop.height),
-            imageHeight - y
-          )
+        Math.min(
+          Math.max(
+            1,
+            Math.floor(
+              crop.height
+            )
+          ),
+          img.naturalHeight - y
         );
+
+      if (
+        width <= 0 ||
+        height <= 0
+      ) {
+        return;
+      }
 
       const canvas =
         document.createElement(
@@ -776,23 +890,10 @@ export default function EditorShell() {
         height
       );
 
-      const result =
+      updatePreview(
         canvasToDataURL(
           canvas
-        );
-
-      /*
-       * IMPORTANT:
-       *
-       * Update preview first.
-       *
-       * This means crop is applied to
-       * the PREVIEW but not committed
-       * until Apply Setting.
-       */
-
-      updatePreview(
-        result,
+        ),
         width,
         height
       );
@@ -895,8 +996,7 @@ export default function EditorShell() {
       }
 
       if (
-        action ===
-        "crop"
+        action === "crop"
       ) {
         const source =
           getCurrentPreview();
@@ -908,11 +1008,6 @@ export default function EditorShell() {
             source
           );
 
-        /*
-         * Start with the ENTIRE
-         * currently visible image.
-         */
-
         setCrop({
           x: 0,
           y: 0,
@@ -922,6 +1017,271 @@ export default function EditorShell() {
             img.naturalHeight,
         });
       }
+    };
+
+  /* =========================================================
+     FILTER — SELECT
+     
+     THIS ONLY CREATES A PREVIEW.
+     
+     image is NOT modified.
+  ========================================================= */
+
+  const selectFilter =
+    async (
+      filter: FilterName
+    ) => {
+      const source =
+        getCurrentPreview();
+
+      if (!source) return;
+
+      setSelectedFilter(
+        filter
+      );
+
+      const defaultIntensity =
+        getDefaultFilterIntensity(
+          filter
+        );
+
+      setFilterIntensity(
+        defaultIntensity
+      );
+
+      const requestId =
+        ++filterRequestId.current;
+
+      try {
+        const result =
+          await applyRetroFilter(
+            source,
+            filter,
+            defaultIntensity
+          );
+
+        /*
+         * Ignore old async results.
+         */
+        if (
+          requestId !==
+          filterRequestId.current
+        ) {
+          return;
+        }
+
+        setFilterPreview(
+          result.image
+        );
+
+        /*
+         * ONLY visual preview.
+         *
+         * Do NOT modify image.
+         */
+        previewImageRef.current =
+          result.image;
+
+        setPreviewImage(
+          result.image
+        );
+
+        setImageSize({
+          width:
+            result.width,
+
+          height:
+            result.height,
+        });
+      } catch (error) {
+        console.error(
+          "Filter preview failed:",
+          error
+        );
+      }
+    };
+
+  /* =========================================================
+     FILTER — INTENSITY
+     
+     ONLY CHANGES PREVIEW.
+  ========================================================= */
+
+  const changeFilterIntensity =
+    async (
+      intensity: number
+    ) => {
+      setFilterIntensity(
+        intensity
+      );
+
+      if (
+        !selectedFilter
+      ) {
+        return;
+      }
+
+      /*
+       * IMPORTANT:
+       *
+       * Use the image BEFORE the current
+       * filter preview was generated.
+       *
+       * Otherwise changing 30 → 40 → 50
+       * would stack the same filter repeatedly.
+       */
+      const source =
+        image;
+
+      if (!source) return;
+
+      const requestId =
+        ++filterRequestId.current;
+
+      try {
+        const result =
+          await applyRetroFilter(
+            source,
+            selectedFilter,
+            intensity
+          );
+
+        if (
+          requestId !==
+          filterRequestId.current
+        ) {
+          return;
+        }
+
+        setFilterPreview(
+          result.image
+        );
+
+        previewImageRef.current =
+          result.image;
+
+        setPreviewImage(
+          result.image
+        );
+
+        setImageSize({
+          width:
+            result.width,
+
+          height:
+            result.height,
+        });
+      } catch (error) {
+        console.error(
+          "Filter intensity preview failed:",
+          error
+        );
+      }
+    };
+
+  /* =========================================================
+     APPLY FILTER
+     
+     THIS IS THE ONLY PLACE WHERE THE FILTER
+     BECOMES COMMITTED.
+  ========================================================= */
+
+  const applyFilter =
+    () => {
+      if (
+        !filterPreview
+      ) {
+        return;
+      }
+
+      /*
+       * NOW the filter becomes permanent.
+       */
+      setImage(
+        filterPreview
+      );
+
+      setPreviewImage(
+        filterPreview
+      );
+
+      previewImageRef.current =
+        filterPreview;
+
+      /*
+       * Filter preview is no longer
+       * considered temporary.
+       */
+      setFilterPreview(
+        null
+      );
+
+      setSelectedFilter(
+        null
+      );
+
+      /*
+       * Reset the Photo Settings
+       * selection so the UI doesn't
+       * remain stuck on the old filter.
+       */
+      setActiveTab(
+        "Filters"
+      );
+    };
+
+  /* =========================================================
+     CANCEL FILTER
+     
+     Revert ONLY the uncommitted filter.
+  ========================================================= */
+
+  const cancelFilter =
+    () => {
+      if (!image) return;
+
+      /*
+       * Invalidate pending filter renders.
+       */
+      filterRequestId.current++;
+
+      setPreviewImage(
+        image
+      );
+
+      previewImageRef.current =
+        image;
+
+      setFilterPreview(
+        null
+      );
+
+      setSelectedFilter(
+        null
+      );
+
+      setFilterIntensity(
+        70
+      );
+
+      loadImage(image)
+        .then((img) => {
+          setImageSize({
+            width:
+              img.naturalWidth,
+
+            height:
+              img.naturalHeight,
+          });
+
+          setResolution({
+            width:
+              img.naturalWidth,
+
+            height:
+              img.naturalHeight,
+          });
+        });
     };
 
   /* =========================================================
@@ -950,17 +1310,11 @@ export default function EditorShell() {
 
   const applyPhotoSetting =
     async () => {
-      const source =
-        getCurrentPreview();
-
-      if (!source) return;
-
-      /*
-       * CROP
-       *
-       * First create cropped preview.
-       * Then commit that exact result.
-       */
+      if (
+        !previewImage
+      ) {
+        return;
+      }
 
       if (
         selectedAction ===
@@ -971,33 +1325,30 @@ export default function EditorShell() {
         const cropped =
           previewImageRef.current;
 
-        if (!cropped) return;
+        if (cropped) {
+          setImage(
+            cropped
+          );
 
-        setImage(
-          cropped
-        );
-
-        setPreviewImage(
-          cropped
-        );
+          setPreviewImage(
+            cropped
+          );
+        }
 
         return;
       }
 
       /*
-       * EVERYTHING ELSE
+       * Flip / rotate / quality /
+       * resize are already previewed.
        *
-       * The operation has already
-       * been previewed.
-       *
-       * Apply Setting simply commits it.
+       * Apply Setting commits them.
        */
-
       commitPreview();
     };
 
   /* =========================================================
-     RESET
+     RESET IMAGE
   ========================================================= */
 
   const resetImage =
@@ -1031,7 +1382,9 @@ export default function EditorShell() {
 
       setImageSize(size);
 
-      setResolution(size);
+      setResolution(
+        size
+      );
 
       setCrop({
         x: 0,
@@ -1051,17 +1404,34 @@ export default function EditorShell() {
       setSelectedAction(
         "quality"
       );
+
+      setSelectedFilter(
+        null
+      );
+
+      setFilterPreview(
+        null
+      );
+
+      setFilterIntensity(
+        70
+      );
+
+      filterRequestId.current++;
     };
 
   /* =========================================================
-     CANCEL
-
-     Go back to LAST COMMITTED IMAGE.
+     CANCEL PHOTO PREVIEW
   ========================================================= */
 
   const cancelPreview =
     async () => {
       if (!image) return;
+
+      /*
+       * Invalidate filter requests.
+       */
+      filterRequestId.current++;
 
       previewImageRef.current =
         image;
@@ -1101,6 +1471,14 @@ export default function EditorShell() {
       });
 
       setZoom(1);
+
+      setFilterPreview(
+        null
+      );
+
+      setSelectedFilter(
+        null
+      );
     };
 
   /* =========================================================
@@ -1238,11 +1616,19 @@ export default function EditorShell() {
           (tab) => (
             <button
               key={tab}
-              onClick={() =>
+              onClick={() => {
                 setActiveTab(
                   tab
-                )
-              }
+                );
+
+                /*
+                 * Do NOT automatically cancel a filter
+                 * when changing tabs.
+                 *
+                 * The preview remains visible until
+                 * Apply or Cancel.
+                 */
+              }}
               className={`retro-tab ${
                 activeTab ===
                 tab
@@ -1407,30 +1793,7 @@ export default function EditorShell() {
 
           </div>
 
-          {/* =================================================
-              IMPORTANT:
-              This must have a real size.
-          ================================================= */}
-
-          <div
-            className="canvas-area"
-            style={{
-              position:
-                "relative",
-
-              width:
-                "100%",
-
-              height:
-                "100%",
-
-              minHeight:
-                0,
-
-              overflow:
-                "hidden",
-            }}
-          >
+          <div className="canvas-area">
 
             <EditorCanvas
               image={
@@ -1448,10 +1811,6 @@ export default function EditorShell() {
 
               onCropChange={
                 setCrop
-              }
-
-              zoom={
-                zoom
               }
             />
 
@@ -1490,6 +1849,10 @@ export default function EditorShell() {
               }
             </div>
 
+            {/* =================================================
+                PHOTO SETTINGS
+            ================================================= */}
+
             {activeTab ===
             "Photo Settings" ? (
 
@@ -1526,16 +1889,59 @@ export default function EditorShell() {
                   crop
                 }
 
+                setCrop={
+                  setCrop
+                }
+
                 applySetting={
                   applyPhotoSetting
                 }
 
                 previewSetting={
-                  resizeImage
+                  async () => {
+                    await resizeImage();
+                  }
                 }
 
                 cancelPreview={
                   cancelPreview
+                }
+              />
+
+            ) : activeTab ===
+              "Filters" ? (
+
+              /* =================================================
+                  FILTERS
+              ================================================= */
+
+              <FiltersPanel
+                selectedFilter={
+                  selectedFilter
+                }
+
+                filterIntensity={
+                  filterIntensity
+                }
+
+                onSelectFilter={
+                  selectFilter
+                }
+
+                onIntensityChange={
+                  changeFilterIntensity
+                }
+
+                onApply={
+                  applyFilter
+                }
+
+                onCancel={
+                  cancelFilter
+                }
+
+                hasPreview={
+                  !!filterPreview
                 }
               />
 
@@ -1593,6 +1999,228 @@ export default function EditorShell() {
 }
 
 /* =========================================================
+   FILTERS PANEL
+========================================================= */
+
+function FiltersPanel({
+  selectedFilter,
+  filterIntensity,
+  onSelectFilter,
+  onIntensityChange,
+  onApply,
+  onCancel,
+  hasPreview,
+}: {
+  selectedFilter:
+    | FilterName
+    | null;
+
+  filterIntensity: number;
+
+  onSelectFilter: (
+    filter: FilterName
+  ) => void;
+
+  onIntensityChange: (
+    intensity: number
+  ) => void;
+
+  onApply: () => void;
+
+  onCancel: () => void;
+
+  hasPreview: boolean;
+}) {
+  return (
+    <>
+
+      {/* FILTER GRID */}
+
+      <div className="setting-grid">
+
+        {filterOptions.map(
+          (filter) => (
+
+            <RetroTool
+              key={
+                filter.name
+              }
+
+              title={
+                filter.title
+              }
+
+              icon={
+                filter.icon
+              }
+
+              selected={
+                selectedFilter ===
+                filter.name
+              }
+
+              onClick={() =>
+                onSelectFilter(
+                  filter.name
+                )
+              }
+            />
+
+          )
+        )}
+
+      </div>
+
+      {/* FILTER CONTROL */}
+
+      {selectedFilter && (
+
+        <div className="photo-control-box">
+
+          <div className="control-heading">
+
+            {filterOptions.find(
+              (item) =>
+                item.name ===
+                selectedFilter
+            )?.title}
+
+          </div>
+
+          <div className="quality-row">
+
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={
+                filterIntensity
+              }
+
+              onChange={(
+                event
+              ) =>
+                onIntensityChange(
+                  Number(
+                    event
+                      .target
+                      .value
+                  )
+                )
+              }
+            />
+
+            <span>
+              {
+                filterIntensity
+              }
+              %
+            </span>
+
+          </div>
+
+          <div className="control-help">
+
+            Live preview enabled.
+
+            <br />
+
+            Changing the
+            intensity does not
+            modify the original.
+
+            <br />
+
+            Click
+            <strong>
+              {" "}
+              Apply Setting
+            </strong>{" "}
+            to finalize.
+
+          </div>
+
+        </div>
+
+      )}
+
+      {!selectedFilter && (
+
+        <div className="photo-control-box">
+
+          <div className="control-heading">
+            Choose a Filter
+          </div>
+
+          <div className="control-help">
+
+            Select a filter to
+            preview it on your
+            image.
+
+            <br />
+
+            Nothing is finalized
+            until you click
+            <strong>
+              {" "}
+              Apply Setting
+            </strong>.
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ACTION BUTTONS */}
+
+      <div
+        style={{
+          display:
+            "flex",
+
+          gap:
+            "6px",
+
+          marginTop:
+            "10px",
+        }}
+      >
+
+        <button
+          className="apply-button"
+          onClick={
+            onApply
+          }
+
+          disabled={
+            !hasPreview
+          }
+        >
+          Apply Setting
+        </button>
+
+        <button
+          className="retro-button"
+          onClick={
+            onCancel
+          }
+
+          disabled={
+            !hasPreview
+          }
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </>
+  );
+}
+
+/* =========================================================
    PHOTO SETTINGS
 ========================================================= */
 
@@ -1608,6 +2236,7 @@ function PhotoSettings({
   setResolution,
 
   crop,
+  setCrop,
 
   applySetting,
   previewSetting,
@@ -1638,12 +2267,17 @@ function PhotoSettings({
 
   crop: CropArea;
 
+  setCrop: (
+    value: CropArea
+  ) => void;
+
   applySetting: () => void;
 
   previewSetting: () => void;
 
   cancelPreview: () => void;
 }) {
+
   const tools = [
     {
       title:
@@ -1714,10 +2348,12 @@ function PhotoSettings({
 
   return (
     <>
+
       <div className="setting-grid">
 
         {tools.map(
           (tool) => (
+
             <RetroTool
               key={
                 tool.action
@@ -1742,6 +2378,7 @@ function PhotoSettings({
                 )
               }
             />
+
           )
         )}
 
@@ -1776,7 +2413,8 @@ function PhotoSettings({
 
                 const value =
                   Number(
-                    event.target
+                    event
+                      .target
                       .value
                   );
 
@@ -1787,23 +2425,29 @@ function PhotoSettings({
                 previewQuality(
                   value
                 );
+
               }}
             />
 
             <span>
               {
                 jpegQuality
-              }%
+              }
+              %
             </span>
 
           </div>
 
           <div className="control-help">
+
             Drag to preview
             compression.
+
             <br />
+
             Apply Setting
             commits it.
+
           </div>
 
         </div>
@@ -1842,12 +2486,14 @@ function PhotoSettings({
 
                     width:
                       Number(
-                        event.target
+                        event
+                          .target
                           .value
                       ),
                   })
                 }
               />
+
             </label>
 
             <span>
@@ -1872,12 +2518,14 @@ function PhotoSettings({
 
                     height:
                       Number(
-                        event.target
+                        event
+                          .target
                           .value
                       ),
                   })
                 }
               />
+
             </label>
 
           </div>
@@ -1925,9 +2573,9 @@ function PhotoSettings({
             </p>
 
             <p>
-              The image will
-              only be changed
-              when you click
+              The image won't
+              be changed until
+              you click
               <strong>
                 {" "}
                 Apply Setting
@@ -1937,13 +2585,19 @@ function PhotoSettings({
           </div>
 
           <div className="crop-size-display">
+
             {Math.round(
               crop.width
-            )}{" "}
-            ×{" "}
+            )}
+
+            {" × "}
+
             {Math.round(
               crop.height
-            )} px
+            )}
+
+            {" px"}
+
           </div>
 
         </div>
@@ -1970,13 +2624,19 @@ function PhotoSettings({
           </div>
 
           <div className="control-help">
+
             Preview applied.
+
             <br />
+
             You can continue
             stacking operations.
+
             <br />
+
             Apply Setting
             commits the result.
+
           </div>
 
         </div>
@@ -1996,20 +2656,26 @@ function PhotoSettings({
           </div>
 
           <div className="control-help">
+
             Preview applied.
+
             <br />
+
             You can continue
             stacking operations.
+
             <br />
+
             Apply Setting
             commits the result.
+
           </div>
 
         </div>
       )}
 
       {/* =====================================================
-          ACTION BUTTONS
+          ACTIONS
       ===================================================== */}
 
       <div
@@ -2044,6 +2710,7 @@ function PhotoSettings({
         </button>
 
       </div>
+
     </>
   );
 }
@@ -2059,6 +2726,7 @@ function GenericPanel({
   controls: string[];
   activeTab: string;
 }) {
+
   const icons = [
     "✦",
     "◈",
@@ -2070,6 +2738,7 @@ function GenericPanel({
 
   return (
     <>
+
       <div className="retro-category">
         {activeTab}
       </div>
@@ -2094,9 +2763,10 @@ function GenericPanel({
               icon={
                 icons[
                   index %
-                    icons.length
+                  icons.length
                 ]
               }
+
             />
 
           )
@@ -2122,6 +2792,7 @@ function GenericPanel({
       <button className="apply-button">
         Apply Effect
       </button>
+
     </>
   );
 }
@@ -2141,6 +2812,7 @@ function RetroTool({
   selected?: boolean;
   onClick?: () => void;
 }) {
+
   return (
     <div className="retro-tool">
 
@@ -2175,6 +2847,7 @@ function PanelTitle({
 }: {
   children: ReactNode;
 }) {
+
   return (
     <div className="panel-title">
       {children}
