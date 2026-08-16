@@ -17,6 +17,13 @@ import {
   FilterName,
 } from "../filters/FilterEngine";
 
+import {
+  applyTabEffect,
+  tabHasIntensity,
+  tabIsStamp,
+  type StampPosition,
+} from "../filters/EffectsEngine";
+
 import "./editor.css";
 
 /* =========================================================
@@ -254,6 +261,86 @@ const filterOptions: {
 ];
 
 /* =========================================================
+   EFFECT TAB CONFIG
+========================================================= */
+
+const effectTabConfigs: Record<
+  string,
+  { name: string; title: string; icon: string }[]
+> = {
+  LUTs: [
+    { name: "y2k", title: "Y2K", icon: "✦" },
+    { name: "vhs", title: "VHS", icon: "◈" },
+    { name: "kodak", title: "Kodak", icon: "✧" },
+    { name: "fuji", title: "Fuji", icon: "★" },
+    { name: "cinema", title: "Cinema", icon: "◆" },
+    { name: "dream", title: "Dream", icon: "◉" },
+  ],
+  Effects: [
+    { name: "grain", title: "Grain", icon: "▤" },
+    { name: "noise", title: "Noise", icon: "▥" },
+    { name: "chromaticAberration", title: "Chromatic Aberration", icon: "◑" },
+    { name: "glitch", title: "Glitch", icon: "▦" },
+    { name: "pixelSort", title: "Pixel Sort", icon: "▧" },
+    { name: "vhsEffect", title: "VHS", icon: "▨" },
+  ],
+  Bloom: [
+    { name: "bloomIntensity", title: "Bloom Intensity", icon: "☀" },
+    { name: "glow", title: "Glow", icon: "✧" },
+    { name: "softness", title: "Softness", icon: "◌" },
+    { name: "highlights", title: "Highlights", icon: "◈" },
+  ],
+  Presets: [
+    { name: "windows95", title: "Windows 95", icon: "▣" },
+    { name: "y2kPreset", title: "Y2K", icon: "✦" },
+    { name: "cyber2000", title: "Cyber 2000", icon: "★" },
+    { name: "disposableCamera", title: "Disposable Camera", icon: "◈" },
+    { name: "vhsTape", title: "VHS Tape", icon: "▧" },
+    { name: "dreamcore", title: "Dreamcore", icon: "◇" },
+  ],
+  Patterns: [
+    { name: "checkerboard", title: "Checkerboard", icon: "▤" },
+    { name: "dots", title: "Dots", icon: "◉" },
+    { name: "grid", title: "Grid", icon: "▦" },
+    { name: "stars", title: "Stars", icon: "★" },
+    { name: "noisePattern", title: "Noise", icon: "▥" },
+    { name: "pixelPattern", title: "Pixel Pattern", icon: "▧" },
+  ],
+  "Photo Shapes": [
+    { name: "circle", title: "Circle", icon: "○" },
+    { name: "rounded", title: "Rounded", icon: "▢" },
+    { name: "heart", title: "Heart", icon: "♡" },
+    { name: "shapeStar", title: "Star", icon: "☆" },
+    { name: "diamond", title: "Diamond", icon: "◇" },
+    { name: "polaroidShape", title: "Polaroid", icon: "▣" },
+  ],
+  "Retro Stamps": [
+    { name: "cd", title: "CD", icon: "◎" },
+    { name: "stampStar", title: "Star", icon: "★" },
+    { name: "flower", title: "Flower", icon: "✿" },
+    { name: "stampHeart", title: "Heart", icon: "♥" },
+    { name: "smile", title: "Smile", icon: "☺" },
+    { name: "y2kStamp", title: "Y2K", icon: "✦" },
+  ],
+  Overlays: [
+    { name: "filmDust", title: "Film Dust", icon: "✦" },
+    { name: "lightLeak", title: "Light Leak", icon: "☀" },
+    { name: "flash", title: "Flash", icon: "⚡" },
+    { name: "scratches", title: "Scratches", icon: "∥" },
+    { name: "crt", title: "CRT", icon: "▤" },
+    { name: "vhsOverlay", title: "VHS", icon: "▧" },
+  ],
+  Frames: [
+    { name: "film", title: "Film", icon: "▣" },
+    { name: "polaroidFrame", title: "Polaroid", icon: "▢" },
+    { name: "windowsFrame", title: "Windows", icon: "❐" },
+    { name: "y2kFrame", title: "Y2K", icon: "★" },
+    { name: "disposableFrame", title: "Disposable", icon: "◈" },
+    { name: "classicFrame", title: "Classic", icon: "◇" },
+  ],
+};
+
+/* =========================================================
    MAIN
 ========================================================= */
 
@@ -365,6 +452,28 @@ export default function EditorShell() {
   const filterRequestId =
     useRef(0);
 
+  /* =======================================================
+     GENERIC EFFECT STATE
+  ======================================================= */
+
+  const [activeEffect, setActiveEffect] =
+    useState<string | null>(null);
+
+  const [effectIntensity, setEffectIntensity] =
+    useState(70);
+
+  const [effectPreview, setEffectPreview] =
+    useState<string | null>(null);
+
+  const effectRequestId =
+    useRef(0);
+
+  const [stampPosition, setStampPosition] =
+    useState<StampPosition>("bottomRight");
+
+  const [stampSize, setStampSize] =
+    useState(50);
+
   const currentPanel =
     panelContent[activeTab];
 
@@ -466,6 +575,10 @@ export default function EditorShell() {
         setFilterIntensity(
           70
         );
+
+        setActiveEffect(null);
+        setEffectPreview(null);
+        setEffectIntensity(70);
       };
 
       img.src = result;
@@ -1285,6 +1398,135 @@ export default function EditorShell() {
     };
 
   /* =========================================================
+     GENERIC EFFECT — SELECT
+  ========================================================= */
+
+  const selectGenericEffect = async (effectName: string) => {
+    const source = getCurrentPreview();
+    if (!source) return;
+
+    setActiveEffect(effectName);
+    const defaultInt = 70;
+    setEffectIntensity(defaultInt);
+
+    const requestId = ++effectRequestId.current;
+
+    try {
+      const result = await applyTabEffect(
+        source, activeTab, effectName,
+        tabHasIntensity(activeTab) ? defaultInt : 100,
+        { stampPosition, stampSize }
+      );
+      if (requestId !== effectRequestId.current) return;
+
+      setEffectPreview(result.image);
+      previewImageRef.current = result.image;
+      setPreviewImage(result.image);
+      setImageSize({ width: result.width, height: result.height });
+    } catch (error) {
+      console.error("Effect preview failed:", error);
+    }
+  };
+
+  /* =========================================================
+     GENERIC EFFECT — INTENSITY
+  ========================================================= */
+
+  const changeGenericIntensity = async (intensity: number) => {
+    setEffectIntensity(intensity);
+    if (!activeEffect) return;
+
+    const source = image;
+    if (!source) return;
+
+    const requestId = ++effectRequestId.current;
+
+    try {
+      const result = await applyTabEffect(
+        source, activeTab, activeEffect, intensity,
+        { stampPosition, stampSize }
+      );
+      if (requestId !== effectRequestId.current) return;
+
+      setEffectPreview(result.image);
+      previewImageRef.current = result.image;
+      setPreviewImage(result.image);
+      setImageSize({ width: result.width, height: result.height });
+    } catch (error) {
+      console.error("Effect intensity failed:", error);
+    }
+  };
+
+  /* =========================================================
+     GENERIC EFFECT — APPLY
+  ========================================================= */
+
+  const applyGenericEffect = () => {
+    if (!effectPreview) return;
+
+    setImage(effectPreview);
+    setPreviewImage(effectPreview);
+    previewImageRef.current = effectPreview;
+
+    setEffectPreview(null);
+    setActiveEffect(null);
+    setEffectIntensity(70);
+  };
+
+  /* =========================================================
+     GENERIC EFFECT — CANCEL
+  ========================================================= */
+
+  const cancelGenericEffect = () => {
+    if (!image) return;
+
+    effectRequestId.current++;
+    setPreviewImage(image);
+    previewImageRef.current = image;
+
+    setEffectPreview(null);
+    setActiveEffect(null);
+    setEffectIntensity(70);
+
+    loadImage(image).then((img) => {
+      setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+      setResolution({ width: img.naturalWidth, height: img.naturalHeight });
+    });
+  };
+
+  /* =========================================================
+     STAMP — OPTION CHANGE
+  ========================================================= */
+
+  const changeStampOption = async (pos?: StampPosition, size?: number) => {
+    const newPos = pos ?? stampPosition;
+    const newSize = size ?? stampSize;
+    if (pos) setStampPosition(newPos);
+    if (size !== undefined) setStampSize(newSize);
+
+    if (!activeEffect) return;
+    const source = image;
+    if (!source) return;
+
+    const requestId = ++effectRequestId.current;
+
+    try {
+      const result = await applyTabEffect(
+        source, "Retro Stamps", activeEffect, effectIntensity,
+        { stampPosition: newPos, stampSize: newSize }
+      );
+      if (requestId !== effectRequestId.current) return;
+
+      setEffectPreview(result.image);
+      previewImageRef.current = result.image;
+      setPreviewImage(result.image);
+      setImageSize({ width: result.width, height: result.height });
+    } catch (error) {
+      console.error("Stamp option failed:", error);
+    }
+  };
+
+  /* =========================================================
      COMMIT PREVIEW
   ========================================================= */
 
@@ -1418,6 +1660,11 @@ export default function EditorShell() {
       );
 
       filterRequestId.current++;
+
+      setActiveEffect(null);
+      setEffectPreview(null);
+      setEffectIntensity(70);
+      effectRequestId.current++;
     };
 
   /* =========================================================
@@ -1479,6 +1726,11 @@ export default function EditorShell() {
       setSelectedFilter(
         null
       );
+
+      setActiveEffect(null);
+      setEffectPreview(null);
+      setEffectIntensity(70);
+      effectRequestId.current++;
     };
 
   /* =========================================================
