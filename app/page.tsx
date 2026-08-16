@@ -1,69 +1,202 @@
-import Image from "next/image";
+"use client";
+
+import "./landing.css";
+
+const galleryImages = [
+  {
+    src: "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=900&q=85",
+    className: "photo photo-1",
+    alt: "Landscape",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=85",
+    className: "photo photo-2",
+    alt: "Nature",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=85",
+    className: "photo photo-3",
+    alt: "Portrait",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85",
+    className: "photo photo-4",
+    alt: "Ocean",
+  },
+];
 
 export default function Home() {
+  const goToEditor = () => {
+    window.location.href = "/editor";
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main className="landing-page">
+
+      {/* =====================================================
+          WINDOWS 95 TOP BAR
+      ===================================================== */}
+
+      <header className="xp-topbar">
+
+        <nav className="xp-nav">
+
+          <button className="nav-link">
+            Home
+          </button>
+
+          <button className="nav-link">
+            About
+          </button>
+
+          <button className="nav-link">
+            Privacy Policy
+          </button>
+
+        </nav>
+
+        <div className="window-controls">
+
+          <button className="window-button">
+            ?
+          </button>
+
+          <button className="window-button">
+            ×
+          </button>
+
+        </div>
+
+      </header>
+
+
+      {/* =====================================================
+          HERO
+      ===================================================== */}
+
+      <section className="hero">
+
+        {/* FLOATING PHOTOS */}
+
+        <div className="photo-gallery">
+
+          {galleryImages.map((photo) => (
+            <div
+              key={photo.className}
+              className={`photo-frame ${photo.className}`}
+            >
+              <img
+                src={photo.src}
+                alt={photo.alt}
+              />
+
+              <div className="photo-sparkles">
+                ✦
+              </div>
+            </div>
+          ))}
+
+        </div>
+
+
+        {/* =================================================
+            TOP CENTER ADS
+        ================================================= */}
+
+        <div className="top-ads">
+
+          <div className="retro-ad large-ad">
+
+            <span className="ad-icon">
+              ▣
+            </span>
+
+            <strong>
+              The app is now available on Google Play!
+            </strong>
+
+            <span className="ad-decoration">
+              ★ ·¸¸. Google Play .¸¸· ★
+            </span>
+
+          </div>
+
+
+          <div className="retro-ad instagram-ad">
+
+            ★ ·¸¸. Instagram @95dani.exe .¸¸· ★
+
+          </div>
+
+
+          <div className="retro-ad pre-register-ad">
+
+            <strong>
+              ▣ Y2KCam: Pre-register now!
+            </strong>
+
+            <span>
+              ★ ·¸¸. Pre-register on Google Play .¸¸· ★
+            </span>
+
+          </div>
+
+        </div>
+
+
+        {/* =================================================
+            CENTER CONTENT
+        ================================================= */}
+
+        <div className="hero-content">
+
+          <h1 className="logo">
+            Photu.exe
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="hero-message">
+            ✨ For the best experience, please use the website
+            <br />
+            on a computer browser. ✨
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          <button
+            className="edit-button"
+            onClick={goToEditor}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Edit Photo
+          </button>
+
         </div>
-      </main>
-    </div>
+
+
+        {/* =================================================
+            EXTRA DECORATION
+        ================================================= */}
+
+        <div className="grass-decoration grass-left" />
+
+        <div className="grass-decoration grass-right" />
+
+      </section>
+
+
+      {/* =====================================================
+          BOTTOM STATUS BAR
+      ===================================================== */}
+
+      <footer className="landing-statusbar">
+
+        <span>
+          photu.exe
+        </span>
+
+        <span>
+          © 1995–2026 Image95
+        </span>
+
+      </footer>
+
+    </main>
   );
 }
